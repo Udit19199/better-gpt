@@ -1,35 +1,47 @@
-const url: string = "http://localhost:11434/api/generate";
+import { OLLAMA_URL, DEFAULT_MODEL, SYSTEM_PROMPT } from "./config.ts"
 
+async function streamResponse() {
 
-
+}
 
 export async function generatePrompt(prompt: string): Promise<string> {
 
-    const response = await fetch(url, {
+
+    const response = await fetch(OLLAMA_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            model: "phi3:3.8b-mini-128k-instruct-q4_K_M",
+            model: DEFAULT_MODEL,
             prompt: prompt,
             stream: true
         })
     });
 
+    if (!response.ok) {
+        throw new Error("Failed to Connect")
+    }
+
+    if (!response.body) {
+        throw new Error("No response")
+    }
+
+
+
     const decoder = new TextDecoder();
-    let full = ""
+    let output = ""
     for await (const chunk of response.body!) {
-        const text = decoder.decode(chunk)
-        for (const line of text.split("\n")) {
+        const decodedChunk = decoder.decode(chunk)
+        for (const line of decodedChunk.split("\n")) {
             if (!line.trim()) continue;
             try {
-                const json = JSON.parse(line);
-                if (json.response) full += json.response
-                if (json.done) return full.trim();
+                const chunkData = JSON.parse(line);
+                if (chunkData.response) output += chunkData.response
+                if (chunkData.done) return output.trim();
             } catch { }
         }
 
     }
 
 
-    return full.trim()
+    return output.trim()
 }
